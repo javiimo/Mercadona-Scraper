@@ -18,13 +18,9 @@ def load_chrome_webdriver(headless=False):
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     return driver
 
-
-
-if __name__ == "__main__":
-    postal_code = "23009"
+def open_categories_mercadona(postal_code):
     driver = load_chrome_webdriver(headless=False)
     driver.get("https://tienda.mercadona.es/categories")
-    #time.sleep(4)
 
     # Handle cookies by pressing "Rechazar"
     try:
@@ -49,6 +45,13 @@ if __name__ == "__main__":
         print("Postal code selected successfully.")
     except Exception:
         print("Did not ask for postal code")
+    
+    return driver
+
+
+if __name__ == "__main__":
+    postal_code = "23009"
+    driver = open_categories_mercadona(postal_code)
 
     time.sleep(4)
     pageSource = driver.page_source
