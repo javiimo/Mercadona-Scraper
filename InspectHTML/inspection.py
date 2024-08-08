@@ -49,13 +49,46 @@ def open_categories_mercadona(postal_code):
     return driver
 
 
+def press_each_product_cell(driver):
+    try:
+        product_cells = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".product-container .product-cell--actionable"))
+        )
+        i = 0
+        for cell in product_cells:
+            i += 1
+            cell.click()
+            print("Product cell clicked.")
+            time.sleep(3)  # Adjust sleep time as necessary
+            
+            # Save the page source
+            pageSource = driver.page_source
+            with open(f"mercadona_product_{i}.html", "w", encoding="utf-8") as file:
+                file.write(pageSource)
+
+            # Find the last product-gallery__thumbnail element and print its link
+            thumbnails = driver.find_elements(By.CSS_SELECTOR, ".product-gallery__thumbnail img")
+            if thumbnails:
+                url_img = thumbnails[-1]
+                url_img = url_img.get_attribute("src")
+                url_img = url_img.replace("h=300", "h=1600").replace("w=300", "w=1600") #Change the resolution to be able to read it.
+                print(f"Last thumbnail link: {url_img}")
+
+            
+            # Navigate back to the categories page
+            driver.back()
+            time.sleep(3)  # Adjust sleep time as necessary to ensure the page loads
+            
+    except Exception as e:
+        print(f"Error clicking product cells: {e}")
+
 if __name__ == "__main__":
     postal_code = "23009"
     driver = open_categories_mercadona(postal_code)
-
-    time.sleep(4)
-    pageSource = driver.page_source
-    with open("mercadona_categories.html", "w", encoding="utf-8") as file:
-        file.write(pageSource)
+    time.sleep(3)
+    press_each_product_cell(driver)
+    # pageSource = driver.page_source
+    # with open("mercadona_categories.html", "w", encoding="utf-8") as file:
+    #     file.write(pageSource)
     driver.close()
         
