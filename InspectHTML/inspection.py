@@ -9,6 +9,8 @@ import time
 def load_chrome_webdriver(headless=False):
     options = Options()
     options.add_argument("user-data-dir=C:/Users/javym/AppData/Local/Google/Chrome/User Data")  # User path to avoid having to choose a default browser
+    options.add_argument("--incognito")  # Open in incognito mode to avoid saving cookies and cache
+    options.add_argument("--disable-extensions")  # Disable extensions
     options.add_argument("--headless") if headless else None
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     return driver
@@ -23,10 +25,12 @@ if __name__ == "__main__":
 
     # Handle cookies by pressing "Rechazar"
     try:
-        rechazar_button = driver.find_element(By.CSS_SELECTOR, "button[data-testid='cookie-policy-reject']")
+        rechazar_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Rechazar')]")
         rechazar_button.click()
-    except Exception:
-        print("Did not show up cookies")
+        print("Cookies rejected successfully.")
+    except Exception as e:
+        print("Did not show up cookies or could not find the reject button.")
+        print(f"Error: {e}")
 
 
     # Postal Code
@@ -38,6 +42,7 @@ if __name__ == "__main__":
         # Press continuar
         continuar_button = driver.find_element(By.CSS_SELECTOR, "button[data-testid='postal-code-checker-button']")
         continuar_button.click()
+        print("Postal code selected successfully.")
     except Exception:
         print("Did not ask for postal code")
 
