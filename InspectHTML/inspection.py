@@ -3,6 +3,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 import time
 
@@ -22,16 +24,17 @@ if __name__ == "__main__":
     postal_code = "23009"
     driver = load_chrome_webdriver(headless=False)
     driver.get("https://tienda.mercadona.es/categories")
-    time.sleep(4)
+    #time.sleep(4)
 
     # Handle cookies by pressing "Rechazar"
     try:
-        rechazar_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Rechazar')]")
+        rechazar_button = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Rechazar')]"))
+        )
         rechazar_button.click()
         print("Cookies rejected successfully.")
     except Exception as e:
         print("Did not show up cookies or could not find the reject button.")
-        print(f"Error: {e}")
 
 
     # Postal Code
@@ -51,6 +54,5 @@ if __name__ == "__main__":
     pageSource = driver.page_source
     with open("mercadona_categories.html", "w", encoding="utf-8") as file:
         file.write(pageSource)
-    time.sleep(4)
     driver.close()
         
