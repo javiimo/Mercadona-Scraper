@@ -53,28 +53,27 @@ def open_categories_mercadona(postal_code, headless=False):
 
 def parse_product_info(product_string):
     try: 
-        # Remove the | character
-        cleaned_string = product_string.replace("|", "")
+        # Split the string by the '|' separator
+        parts = product_string.split('|')
         
-        # Split the string by spaces
-        parts = cleaned_string.split()
+        # Extract the container information
+        container = parts[0].strip()
         
-        # Check if the number of parts is as expected
-        if len(parts) != 5:
-            raise ValueError(f"Expected 5 parts, got {len(parts)}: {parts}")
-        
-        container, size_num, size_unit, price_num, price_unit = parts
+        # Extract the price and price unit
+        price_info = parts[1].strip()
+        price_value, price_unit = price_info.split('/')
+        price_value = price_value.replace(',', '.')
             
         # Convert the price_per_liter to a string without the comma
-        price_num = price_num.replace(',', '.')
+        price_value = price_value.replace(',', '.')
         
         # Return the desired output
-        return container, size_num, size_unit, price_num, price_unit
+        return container, price_value, price_unit
     except Exception as e:
         error_message = f"Error parsing the format: {e}\n"
         with open('errors.log', 'a') as error_file:
             error_file.write(error_message)
-        return product_string, None, None, None, None
+        return product_string, None, None
 
 
 
@@ -88,7 +87,7 @@ def press_each_product_cell(driver, categorie, subcategorie):
             
             # Write the header row only if the file is empty
             if not file_exists:
-                writer.writerow(['categorie', 'subcategorie', 'product name', 'container', 'size num', 'size unit', 'price num', 'price unit', 'description', 'link'])
+                writer.writerow(['categorie', 'subcategorie', 'product name', 'container', 'price value', 'price unit', 'description', 'link'])
 
             product_cells = WebDriverWait(driver, 10).until(
                         EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".product-container .product-cell--actionable"))
@@ -113,7 +112,7 @@ def press_each_product_cell(driver, categorie, subcategorie):
                     description = soup.select_one('.private-product-detail__left').get('aria-label')
                     
                     # Parse format into several categories
-                    container, size_num, size_unit, price_num, price_unit = parse_product_info(format)
+                    container, price_value, price_unit = parse_product_info(format)
 
                     # Find the last product-gallery__thumbnail element and get its link
                     thumbnails = driver.find_elements(By.CSS_SELECTOR, ".product-gallery__thumbnail img")
@@ -130,9 +129,7 @@ def press_each_product_cell(driver, categorie, subcategorie):
                         subcategorie or '',
                         product_name or '',
                         container or '',
-                        size_num or '',
-                        size_unit or '',
-                        price_num or '',
+                        price_value or '',
                         price_unit or '',
                         description or '',
                         url_img or ''
@@ -152,6 +149,12 @@ def press_each_product_cell(driver, categorie, subcategorie):
                     with open('errors.log', 'a') as error_file:
                         error_file.write(error_message)
                     print(error_message)
+                    
+                    # Save the current HTML to the error htmls folder with a unique name
+                    html_filename = f"error_{categorie}_{subcategorie}_{int(time.time())}.html"
+                    with open(os.path.join('error_htmls', html_filename), 'w', encoding='utf-8') as html_file:
+                        html_file.write(pageSource)
+                    
                     # Return to the saved URL if an error occurs
                     driver.get(current_url)
                     continue
