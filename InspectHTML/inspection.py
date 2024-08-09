@@ -5,7 +5,6 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
 from bs4 import BeautifulSoup
 
 import time
@@ -53,14 +52,12 @@ def open_categories_mercadona(postal_code):
 
 
 
-def press_each_product_cell(driver):
+def press_each_product_cell(driver, categorie, subcategorie):
     try:
         product_cells = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".product-container .product-cell--actionable"))
         )
-        i = 0
         for cell in product_cells:
-            i += 1
             cell.click()
             print("Product cell clicked.")
             time.sleep(3)  # Adjust sleep time as necessary
@@ -106,7 +103,7 @@ def press_each_product_cell(driver):
 
 
 
-def iterate_categories_and_subheads(driver):
+def iterate_categories_and_subheads(driver, skip_no_food=True):
     try:
         # Wait for the category menu to be present
         WebDriverWait(driver, 10).until(
@@ -122,6 +119,14 @@ def iterate_categories_and_subheads(driver):
             header_button = WebDriverWait(category_item, 10).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, ".collapse > button"))
             )
+
+            # Skip non food categories
+            if skip_no_food and header_button.text in ["Agua y refrescos", "Bebé", "Bodega", "Cuidado del cabello", 
+                                                        "Cuidado facial y corporal", "Fitoterapia y parafarmacia", 
+                                                        "Limpieza y hogar", "Maquillaje", "Mascotas"
+                                                        ]:  
+                continue
+
             header_button.click()
             time.sleep(2)  # Adjust sleep time as necessary to ensure the subheads load
             
@@ -135,7 +140,7 @@ def iterate_categories_and_subheads(driver):
                 subhead_text = subhead_button.text
                 print(f"Scraping: {subhead_text}")
                 time.sleep(3)
-                # press_each_product_cell(driver)
+                # press_each_product_cell(driver, header_button.text, subhead_button.text)
                 
             # Close the category after processing its subheads
             # header_button.click()
