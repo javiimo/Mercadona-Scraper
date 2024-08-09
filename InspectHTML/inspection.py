@@ -19,8 +19,8 @@ def load_chrome_webdriver(headless=False):
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     return driver
 
-def open_categories_mercadona(postal_code):
-    driver = load_chrome_webdriver(headless=False)
+def open_categories_mercadona(postal_code, headless=False):
+    driver = load_chrome_webdriver(headless)
     driver.get("https://tienda.mercadona.es/categories")
 
     # Handle cookies by pressing "Rechazar"
@@ -74,7 +74,7 @@ def press_each_product_cell(driver, categorie, subcategorie):
     try:
 
         # Check if the file exists and is not empty
-        file_exists = os.path.isfile('mercadona.csv') and os.path.getsize('products_info.csv') > 0
+        file_exists = os.path.isfile('mercadona.csv') and os.path.getsize('mercadona.csv') > 0
 
         with open('mercadona.csv', mode='a', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter='$') #! Notice the $ separator to make sure it is not contained in the description of the product
@@ -128,18 +128,20 @@ def press_each_product_cell(driver, categorie, subcategorie):
                     url_img or ''
                 ])
                 
-                # Print extracted details
-                print(f"Title: {product_name}")
-                print(f"Format: {format}")
-                print(f"Description: {description}")
-                print(f"Link: {url_img}")
+                # Print what was added to the csv
+                print(f"Added {product_name}")
                 
                 # Navigate back to the categories page
                 driver.back()
                 time.sleep(3)  # Adjust sleep time as necessary to ensure the page loads
                 
     except Exception as e:
-        print(f"Error clicking product cells: {e}")
+        error_message = f"Error clicking product cells: {e}\n"
+        if 'product_name' in locals():
+            error_message += f"Product name: {product_name}\n"
+        with open('errors.log', 'a') as error_file:
+            error_file.write(error_message)
+        print(error_message)
             
 
 
@@ -184,9 +186,13 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                 press_each_product_cell(driver, header_button.text, subhead_button.text)
                 
             time.sleep(2)  # Adjust sleep time as necessary to ensure the category closes
-            
     except Exception as e:
-        print(f"Error iterating categories and subheads: {e}")
+        error_message = f"Error iterating categories and subcategories: {e}\n"
+        if 'subhead_text' in locals():
+            error_message += f"Subcategory: {subhead_text}\n"
+        with open('errors.log', 'a') as error_file:
+            error_file.write(error_message)
+        print(error_message)
 
 
 
