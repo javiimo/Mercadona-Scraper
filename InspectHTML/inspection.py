@@ -91,7 +91,7 @@ def press_each_product_cell(driver, categorie, subcategorie):
                 cell.click()
                 time.sleep(3)  # Adjust sleep time as necessary
                 
-                # Save the page source
+                # Get page source
                 pageSource = driver.page_source
                 
                 # Parse the page source with BeautifulSoup
@@ -144,7 +144,7 @@ def press_each_product_cell(driver, categorie, subcategorie):
 
 
 
-def iterate_categories_and_subheads(driver, skip_no_food=True):
+def iterate_categories_and_subcategories(driver, skip_no_food=True):
     try:
         # Wait for the category menu to be present
         WebDriverWait(driver, 10).until(
@@ -193,10 +193,9 @@ def iterate_categories_and_subheads(driver, skip_no_food=True):
 
 if __name__ == "__main__":
     postal_code = "23009"
-    driver = open_categories_mercadona(postal_code)
+    driver = open_categories_mercadona(postal_code, headless=True)
     time.sleep(3)
-    iterate_categories_and_subheads(driver)
-    #press_each_product_cell(driver)
+    iterate_categories_and_subcategories(driver)
     # pageSource = driver.page_source
     # with open("mercadona_categories.html", "w", encoding="utf-8") as file:
     #     file.write(pageSource)
