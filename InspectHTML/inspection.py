@@ -6,7 +6,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
-
+import os
+import csv
 import time
 
 
@@ -54,49 +55,74 @@ def open_categories_mercadona(postal_code):
 
 def press_each_product_cell(driver, categorie, subcategorie):
     try:
-        product_cells = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".product-container .product-cell--actionable"))
-        )
-        for cell in product_cells:
-            cell.click()
-            print("Product cell clicked.")
-            time.sleep(3)  # Adjust sleep time as necessary
-            
-            # Save the page source
-            pageSource = driver.page_source
-            # with open(f"mercadona_product_{i}.html", "w", encoding="utf-8") as file:
-            #     file.write(pageSource)
-            
-            # Parse the page source with BeautifulSoup
-            soup = BeautifulSoup(pageSource, 'html.parser')
-            
-            # Extract product details
-            title = soup.select_one('.private-product-detail__description').get_text(strip=True)
-            format_size = ' '.join([span.get_text(strip=True) for span in soup.select('.product-format__size .headline1-r')])
-            previous_price = soup.select_one('.product-price__previous-unit-price').get_text(strip=True)
-            current_price = soup.select_one('.product-price__unit-price--discount').get_text(strip=True)
-            units = soup.select_one('.product-price__extra-price').get_text(strip=True)
-            allergens = soup.select_one('.private-product-detail__left').get('aria-label')
-            
-            # Print extracted details
-            print(f"Title: {title}")
-            print(f"Format Size: {format_size}")
-            print(f"Previous Price: {previous_price}{units}")
-            print(f"Current Price: {current_price}{units}")
-            print(f"Allergens and other info: {allergens}")
-            
-            # Find the last product-gallery__thumbnail element and print its link
-            thumbnails = driver.find_elements(By.CSS_SELECTOR, ".product-gallery__thumbnail img")
-            if thumbnails:
-                url_img = thumbnails[-1]
-                url_img = url_img.get_attribute("src")
-                url_img = url_img.replace("h=300", "h=1600").replace("w=300", "w=1600") #Change the resolution to be able to read it.
-                print(f"Last thumbnail link: {url_img}")
 
-            # Navigate back to the categories page
-            driver.back()
-            time.sleep(3)  # Adjust sleep time as necessary to ensure the page loads
+        # Check if the file exists and is not empty
+        file_exists = os.path.isfile('mercadona.csv') and os.path.getsize('products_info.csv') > 0
+
+        with open('mercadona.csv', mode='a', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter='$') #! Notice the $ separator to make sure it is not contained in the description of the product
             
+            # Write the header ro   w only if the file is empty
+            if not file_exists:
+                writer.writerow(['categorie', 'subcategorie', 'product name', 'format size', 'previous price', 'current price', 'units', 'description', 'link'])
+
+            
+            product_cells = WebDriverWait(driver, 10).until(
+                        EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".product-container .product-cell--actionable"))
+                        )
+            for cell in product_cells:
+                cell.click()
+                print("Product cell clicked.")
+                time.sleep(3)  # Adjust sleep time as necessary
+                
+                # Save the page source
+                pageSource = driver.page_source
+                
+                # Parse the page source with BeautifulSoup
+                soup = BeautifulSoup(pageSource, 'html.parser')
+                
+                # Extract product details
+                title = soup.select_one('.private-product-detail__description').get_text(strip=True)
+                format_size = ' '.join([span.get_text(strip=True) for span in soup.select('.product-format__size .headline1-r')])
+                previous_price = soup.select_one('.product-price__previous-unit-price').get_text(strip=True)
+                current_price = soup.select_one('.product-price__unit-price--discount').get_text(strip=True)
+                units = soup.select_one('.product-price__extra-price').get_text(strip=True)
+                allergens = soup.select_one('.private-product-detail__left').get('aria-label')
+                
+                # Find the last product-gallery__thumbnail element and get its link
+                thumbnails = driver.find_elements(By.CSS_SELECTOR, ".product-gallery__thumbnail img")
+                if thumbnails:
+                    url_img = thumbnails[-1]
+                    url_img = url_img.get_attribute("src")
+                    url_img = url_img.replace("h=300", "h=1600").replace("w=300", "w=1600") #Change the resolution to be able to read it.
+                else:
+                    url_img = ''
+                
+                # Write the product details to the CSV file
+                writer.writerow([
+                    categorie or '',
+                    subcategorie or '',
+                    title or '',
+                    format_size or '',
+                    (previous_price + units) or '',
+                    (current_price + units) or '',
+                    units or '',
+                    allergens or '',
+                    url_img or ''
+                ])
+                
+                # Print extracted details
+                print(f"Title: {title}")
+                print(f"Format Size: {format_size}")
+                print(f"Previous Price: {previous_price}{units}")
+                print(f"Current Price: {current_price}{units}")
+                print(f"Allergens and other info: {allergens}")
+                print(f"Last thumbnail link: {url_img}")
+                
+                # Navigate back to the categories page
+                driver.back()
+                time.sleep(3)  # Adjust sleep time as necessary to ensure the page loads
+                
     except Exception as e:
         print(f"Error clicking product cells: {e}")
             
@@ -140,10 +166,8 @@ def iterate_categories_and_subheads(driver, skip_no_food=True):
                 subhead_text = subhead_button.text
                 print(f"Scraping: {subhead_text}")
                 time.sleep(3)
-                # press_each_product_cell(driver, header_button.text, subhead_button.text)
+                press_each_product_cell(driver, header_button.text, subhead_button.text)
                 
-            # Close the category after processing its subheads
-            # header_button.click()
             time.sleep(2)  # Adjust sleep time as necessary to ensure the category closes
             
     except Exception as e:
