@@ -5,6 +5,8 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+from bs4 import BeautifulSoup
 
 import time
 
@@ -49,7 +51,7 @@ def open_categories_mercadona(postal_code):
     return driver
 
 
-from bs4 import BeautifulSoup
+
 
 def press_each_product_cell(driver):
     try:
@@ -101,14 +103,56 @@ def press_each_product_cell(driver):
     except Exception as e:
         print(f"Error clicking product cells: {e}")
             
+
+
+
+def iterate_categories_and_subheads(driver):
+    try:
+        # Wait for the category menu to be present
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".category-menu"))
+        )
+        
+        category_items = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".category-menu__item"))
+        )
+        
+        for category_item in category_items:
+            # Click the category to open it
+            header_button = WebDriverWait(category_item, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, ".collapse > button"))
+            )
+            header_button.click()
+            time.sleep(2)  # Adjust sleep time as necessary to ensure the subheads load
+            
+            # Now iterate over each subhead within the opened category
+            subheads = WebDriverWait(category_item, 10).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".category-item"))
+            )
+            for subhead in subheads:
+                subhead_button = subhead.find_element(By.CSS_SELECTOR, ".category-item__link")
+                subhead_button.click()
+                subhead_text = subhead_button.text
+                print(f"Scraping: {subhead_text}")
+                time.sleep(3)
+                # press_each_product_cell(driver)
+                
+            # Close the category after processing its subheads
+            # header_button.click()
+            time.sleep(2)  # Adjust sleep time as necessary to ensure the category closes
+            
     except Exception as e:
-        print(f"Error clicking product cells: {e}")
+        print(f"Error iterating categories and subheads: {e}")
+
+
+
 
 if __name__ == "__main__":
     postal_code = "23009"
     driver = open_categories_mercadona(postal_code)
     time.sleep(3)
-    press_each_product_cell(driver)
+    iterate_categories_and_subheads(driver)
+    #press_each_product_cell(driver)
     # pageSource = driver.page_source
     # with open("mercadona_categories.html", "w", encoding="utf-8") as file:
     #     file.write(pageSource)
