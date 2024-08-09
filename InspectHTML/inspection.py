@@ -57,7 +57,13 @@ def parse_product_info(product_string):
         cleaned_string = product_string.replace("|", "")
         
         # Split the string by spaces
-        container, size_num, size_unit, price_num, price_unit = cleaned_string.split()
+        parts = cleaned_string.split()
+        
+        # Check if the number of parts is as expected
+        if len(parts) != 5:
+            raise ValueError(f"Expected 5 parts, got {len(parts)}: {parts}")
+        
+        container, size_num, size_unit, price_num, price_unit = parts
             
         # Convert the price_per_liter to a string without the comma
         price_num = price_num.replace(',', '.')
@@ -65,7 +71,9 @@ def parse_product_info(product_string):
         # Return the desired output
         return container, size_num, size_unit, price_num, price_unit
     except Exception as e:
-        print(f"Error parsing the format: {e}")
+        error_message = f"Error parsing the format: {e}\n"
+        with open('errors.log', 'a') as error_file:
+            error_file.write(error_message)
         return product_string, None, None, None, None
 
 
