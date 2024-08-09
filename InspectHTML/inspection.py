@@ -10,7 +10,6 @@ import os
 import csv
 import time
 
-
 def load_chrome_webdriver(headless=False):
     options = Options()
     options.add_argument("user-data-dir=C:/Users/javym/AppData/Local/Google/Chrome/User Data")  # User path to avoid having to choose a default browser
@@ -52,6 +51,24 @@ def open_categories_mercadona(postal_code):
 
 
 
+def parse_product_info(product_string):
+    try: 
+        # Remove the | character
+        cleaned_string = product_string.replace("|", "")
+        
+        # Split the string by spaces
+        container, size_num, size_unit, price_num, price_unit = cleaned_string.split()
+            
+        # Convert the price_per_liter to a string without the comma
+        price_num = price_num.replace(',', '.')
+        
+        # Return the desired output
+        return container, size_num, size_unit, price_num, price_unit
+    except Exception as e:
+        print(f"Error parsing the format: {e}")
+        return product_string, None, None, None, None
+
+
 
 def press_each_product_cell(driver, categorie, subcategorie):
     try:
@@ -62,9 +79,9 @@ def press_each_product_cell(driver, categorie, subcategorie):
         with open('mercadona.csv', mode='a', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter='$') #! Notice the $ separator to make sure it is not contained in the description of the product
             
-            # Write the header ro   w only if the file is empty
+            # Write the header row only if the file is empty
             if not file_exists:
-                writer.writerow(['categorie', 'subcategorie', 'product name', 'format size', 'previous price', 'current price', 'units', 'description', 'link'])
+                writer.writerow(['categorie', 'subcategorie', 'product name', 'container', 'size num', 'size unit', 'price num', 'price unit', 'description', 'link'])
 
             
             product_cells = WebDriverWait(driver, 10).until(
@@ -72,7 +89,6 @@ def press_each_product_cell(driver, categorie, subcategorie):
                         )
             for cell in product_cells:
                 cell.click()
-                print("Product cell clicked.")
                 time.sleep(3)  # Adjust sleep time as necessary
                 
                 # Save the page source
@@ -82,13 +98,13 @@ def press_each_product_cell(driver, categorie, subcategorie):
                 soup = BeautifulSoup(pageSource, 'html.parser')
                 
                 # Extract product details
-                title = soup.select_one('.private-product-detail__description').get_text(strip=True)
-                format_size = ' '.join([span.get_text(strip=True) for span in soup.select('.product-format__size .headline1-r')])
-                previous_price = soup.select_one('.product-price__previous-unit-price').get_text(strip=True)
-                current_price = soup.select_one('.product-price__unit-price--discount').get_text(strip=True)
-                units = soup.select_one('.product-price__extra-price').get_text(strip=True)
-                allergens = soup.select_one('.private-product-detail__left').get('aria-label')
+                product_name = soup.select_one('.private-product-detail__description').get_text(strip=True)
+                format = ' '.join([span.get_text(strip=True) for span in soup.select('.product-format__size .headline1-r')])
+                description = soup.select_one('.private-product-detail__left').get('aria-label')
                 
+                #Parse format into several categories
+                container, size_num, size_unit, price_num, price_unit = parse_product_info(format)
+
                 # Find the last product-gallery__thumbnail element and get its link
                 thumbnails = driver.find_elements(By.CSS_SELECTOR, ".product-gallery__thumbnail img")
                 if thumbnails:
@@ -102,22 +118,21 @@ def press_each_product_cell(driver, categorie, subcategorie):
                 writer.writerow([
                     categorie or '',
                     subcategorie or '',
-                    title or '',
-                    format_size or '',
-                    (previous_price + units) or '',
-                    (current_price + units) or '',
-                    units or '',
-                    allergens or '',
+                    product_name or '',
+                    container or '',
+                    size_num or '',
+                    size_unit or '',
+                    price_num or '',
+                    price_unit or '',
+                    description or '',
                     url_img or ''
                 ])
                 
                 # Print extracted details
-                print(f"Title: {title}")
-                print(f"Format Size: {format_size}")
-                print(f"Previous Price: {previous_price}{units}")
-                print(f"Current Price: {current_price}{units}")
-                print(f"Allergens and other info: {allergens}")
-                print(f"Last thumbnail link: {url_img}")
+                print(f"Title: {product_name}")
+                print(f"Format: {format}")
+                print(f"Description: {description}")
+                print(f"Link: {url_img}")
                 
                 # Navigate back to the categories page
                 driver.back()
