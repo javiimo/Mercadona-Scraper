@@ -12,7 +12,7 @@ import time
 
 def load_chrome_webdriver(headless=False):
     options = Options()
-    options.add_argument("user-data-dir=C:/Users/javym/AppData/Local/Google/Chrome/User Data")  # User path to avoid having to choose a default browser
+    options.add_argument("--disable-search-engine-choice-screen") # Avoid having to choose a default browser
     options.add_argument("--incognito")  # Open in incognito mode to avoid saving cookies and cache
     options.add_argument("--disable-extensions")  # Disable extensions
     options.add_argument("--headless") if headless else None
@@ -265,7 +265,7 @@ if __name__ == "__main__":
     # Delete mercadona.csv and errors.log if they exist
     remove_execution_files(['mercadona.csv', 'errors.log'])
     postal_code = "23009"
-    driver = open_categories_mercadona(postal_code, headless=True)
+    driver = open_categories_mercadona(postal_code, headless=False)
     time.sleep(3)
     iterate_categories_and_subcategories(driver)
     driver.close()
