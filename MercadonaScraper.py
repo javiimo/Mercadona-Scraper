@@ -102,7 +102,7 @@ def press_each_product_cell(driver, categorie, subcategorie):
                     WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, '.private-product-detail__description'))
                     )
-                    time.sleep(3)  # Adjust sleep time as necessary
+                    time.sleep(5)  # Adjust sleep time as necessary
                     
                     # Get page source
                     pageSource = driver.page_source
@@ -149,7 +149,7 @@ def press_each_product_cell(driver, categorie, subcategorie):
                     WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, ".category-menu"))
                     )
-                    time.sleep(2)  # Adjust sleep time as necessary to ensure the page loads
+                    time.sleep(5)  # Adjust sleep time as necessary to ensure the page loads
 
                 except Exception as e:
                     error_message = f"Error clicking product cells: {e}\n"
@@ -205,7 +205,7 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                 WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".category-item"))
                 )
-                time.sleep(2)  # Adjust sleep time as necessary to ensure the subheads load
+                time.sleep(600)  # Adjust sleep time as necessary to ensure the subheads load
                 
                 # Now iterate over each subhead within the opened category
                 subheads = WebDriverWait(category_item, 10).until(
@@ -221,7 +221,7 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                         )
                         subhead_text = subhead_button.text
                         print(f"Scraping: {subhead_text}")
-                        time.sleep(2)
+                        time.sleep(120)
                         press_each_product_cell(driver, header_button.text, subhead_button.text)
                     except Exception as e:
                         error_message = f"Error processing subhead: {e}\n"
@@ -232,7 +232,7 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                         print(error_message)
                         continue  # Skip to the next subhead
                     
-                time.sleep(2)  # Adjust sleep time as necessary to ensure the category closes
+                time.sleep(5)  # Adjust sleep time as necessary to ensure the category closes
             except Exception as e:
                 error_message = f"Error iterating categories and subcategories: {e}\n"
                 if 'subhead_text' in locals():
@@ -260,14 +260,18 @@ def remove_execution_files(files_to_delete):
             print(f"Error deleting file {file}: {e}")
 
 if __name__ == "__main__":
+    start_time = time.time()
+
     # Delete mercadona.csv and errors.log if they exist
     remove_execution_files(['mercadona.csv', 'errors.log'])
     postal_code = "23009"
     driver = open_categories_mercadona(postal_code, headless=True)
     time.sleep(3)
     iterate_categories_and_subcategories(driver)
-    # pageSource = driver.page_source
-    # with open("mercadona_categories.html", "w", encoding="utf-8") as file:
-    #     file.write(pageSource)
     driver.close()
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    minutes = elapsed_time / 60
+    print(f"The program took {minutes:.2f} minutes to execute.")
         
