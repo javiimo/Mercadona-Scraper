@@ -77,16 +77,26 @@ def parse_product_info(product_string):
 
 
 
-def press_each_product_cell(driver, categorie, subcategorie):
-    try:
-        # Check if the file exists and is not empty
-        file_exists = os.path.isfile('mercadona.csv') and os.path.getsize('mercadona.csv') > 0
+def get_last_product():
+    if os.path.exists('mercadona.csv'):
+        with open('mercadona.csv', 'r', newline='', encoding='utf-8') as file:
+            reader = csv.reader(file, delimiter='$')
+            last_row = None
+            for row in reader:
+                last_row = row
+            if last_row:
+                return last_row[0], last_row[1], last_row[2]  # categorie, subcategorie, product name
+    return None, None, None
 
+def press_each_product_cell(driver, categorie, subcategorie, last_product=None):
+    try:
+        resume_mode = last_product is not None
+        
         with open('mercadona.csv', mode='a', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter='$') #! Notice the $ separator to make sure it is not contained in the description of the product
             
             # Write the header row only if the file is empty
-            if not file_exists:
+            if os.path.getsize('mercadona.csv') == 0:
                 writer.writerow(['categorie', 'subcategorie', 'product name', 'container', 'price value', 'price unit', 'description', 'link'])
 
             product_cells = WebDriverWait(driver, 10).until(
@@ -94,6 +104,12 @@ def press_each_product_cell(driver, categorie, subcategorie):
                         )
             for cell in product_cells:
                 try:
+                    if resume_mode:
+                        product_name = cell.find_element(By.CSS_SELECTOR, '.product-cell__description').text
+                        if product_name == last_product:
+                            resume_mode = False
+                        continue
+
                     # Save the current webpage link before clicking the cell in case of an error
                     current_url = driver.current_url
                     
@@ -177,6 +193,9 @@ def press_each_product_cell(driver, categorie, subcategorie):
 
 
 def iterate_categories_and_subcategories(driver, skip_no_food=True):
+    last_categorie, last_subcategorie, last_product = get_last_product()
+    resume_mode = last_product is not None
+    
     try:
         # Wait for the category menu to be present
         WebDriverWait(driver, 10).until(
@@ -201,11 +220,14 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                                                             ]:  
                     continue
 
+                if resume_mode and header_button.text != last_categorie:
+                    continue
+
                 header_button.click()
                 WebDriverWait(driver, 10).until(
                     EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".category-item"))
                 )
-                time.sleep(600)  # Adjust sleep time as necessary to ensure the subheads load
+                time.sleep(5 if resume_mode else 600)  # Adjust sleep time as necessary to ensure the subheads load
                 
                 # Now iterate over each subhead within the opened category
                 subheads = WebDriverWait(category_item, 10).until(
@@ -214,6 +236,10 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                 for subhead in subheads:
                     try:
                         subhead_button = subhead.find_element(By.CSS_SELECTOR, ".category-item__link")
+                        
+                        if resume_mode and subhead_button.text != last_subcategorie:
+                            continue
+
                         subhead_button.click()
                         # Wait for the product grid to load
                         WebDriverWait(driver, 10).until(
@@ -222,7 +248,11 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                         subhead_text = subhead_button.text
                         print(f"Scraping: {subhead_text}")
                         time.sleep(120)
-                        press_each_product_cell(driver, header_button.text, subhead_button.text)
+                        
+                        if resume_mode:
+                            resume_mode = False  # Switch off resume mode after finding the last product
+                        
+                        press_each_product_cell(driver, header_button.text, subhead_button.text, last_product)
                     except Exception as e:
                         error_message = f"Error processing subhead: {e}\n"
                         if 'subhead_text' in locals():
@@ -263,9 +293,9 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # Delete mercadona.csv and errors.log if they exist
-    remove_execution_files(['mercadona.csv', 'errors.log'])
+    remove_execution_files(['errors.log'])
     postal_code = "23009"
-    driver = open_categories_mercadona(postal_code, headless=False)
+    driver = open_categories_mercadona(postal_code, headless=True)
     time.sleep(3)
     iterate_categories_and_subcategories(driver)
     driver.close()
@@ -275,4 +305,3 @@ if __name__ == "__main__":
     minutes = int(elapsed_time / 60)
     seconds = int(elapsed_time % 60)
     print(f"The program took {minutes:02d}:{seconds:02d} minutes to execute.")
-        
