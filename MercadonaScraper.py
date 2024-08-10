@@ -272,6 +272,7 @@ if __name__ == "__main__":
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    minutes = elapsed_time / 60
-    print(f"The program took {minutes:.2f} minutes to execute.")
+    minutes = int(elapsed_time / 60)
+    seconds = int(elapsed_time % 60)
+    print(f"The program took {minutes:02d}:{seconds:02d} minutes to execute.")
         
