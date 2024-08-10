@@ -98,6 +98,10 @@ def press_each_product_cell(driver, categorie, subcategorie):
                     current_url = driver.current_url
                     
                     cell.click()
+                    # Wait for the product details to load
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '.private-product-detail__description'))
+                    )
                     time.sleep(3)  # Adjust sleep time as necessary
                     
                     # Get page source
@@ -140,7 +144,12 @@ def press_each_product_cell(driver, categorie, subcategorie):
                     
                     # Navigate back to the categories page
                     driver.back()
-                    time.sleep(3)  # Adjust sleep time as necessary to ensure the page loads
+
+                    # Wait for the categories page to load
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, ".category-menu"))
+                    )
+                    time.sleep(2)  # Adjust sleep time as necessary to ensure the page loads
 
                 except Exception as e:
                     error_message = f"Error clicking product cells: {e}\n"
@@ -193,6 +202,9 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                     continue
 
                 header_button.click()
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".category-item"))
+                )
                 time.sleep(2)  # Adjust sleep time as necessary to ensure the subheads load
                 
                 # Now iterate over each subhead within the opened category
@@ -203,9 +215,13 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                     try:
                         subhead_button = subhead.find_element(By.CSS_SELECTOR, ".category-item__link")
                         subhead_button.click()
+                        # Wait for the product grid to load
+                        WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, ".product-container .product-cell--actionable"))
+                        )
                         subhead_text = subhead_button.text
                         print(f"Scraping: {subhead_text}")
-                        time.sleep(3)
+                        time.sleep(2)
                         press_each_product_cell(driver, header_button.text, subhead_button.text)
                     except Exception as e:
                         error_message = f"Error processing subhead: {e}\n"
