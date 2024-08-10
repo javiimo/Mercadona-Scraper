@@ -89,106 +89,113 @@ def get_last_product():
     return None, None, None
 
 def press_each_product_cell(driver, categorie, subcategorie, last_product=None):
-    try:
-        resume_mode = last_product is not None
+    resume_mode = last_product is not None
+    
+    with open('mercadona.csv', mode='a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file, delimiter='$')
         
-        with open('mercadona.csv', mode='a', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file, delimiter='$') #! Notice the $ separator to make sure it is not contained in the description of the product
-            
-            # Write the header row only if the file is empty
-            if os.path.getsize('mercadona.csv') == 0:
-                writer.writerow(['categorie', 'subcategorie', 'product name', 'container', 'price value', 'price unit', 'description', 'link'])
+        if os.path.getsize('mercadona.csv') == 0:
+            writer.writerow(['categorie', 'subcategorie', 'product name', 'container', 'price value', 'price unit', 'description', 'link'])
 
-            product_cells = WebDriverWait(driver, 10).until(
-                        EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".product-container .product-cell--actionable"))
-                        )
-            for cell in product_cells:
-                try:
-                    if resume_mode:
-                        product_name = cell.find_element(By.CSS_SELECTOR, '.product-cell__description').text
-                        if product_name == last_product:
-                            resume_mode = False
+        product_cells = WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".product-container .product-cell--actionable"))
+                    )
+        for cell in product_cells:
+            try:
+                # Try to get the product name using different possible selectors
+                product_name = None
+                for selector in ['.product-cell__description', '.product-cell__name', 'h4']:
+                    try:
+                        product_name = cell.find_element(By.CSS_SELECTOR, selector).text
+                        if product_name:
+                            break
+                    except:
                         continue
 
-                    # Save the current webpage link before clicking the cell in case of an error
-                    current_url = driver.current_url
-                    
-                    cell.click()
-                    # Wait for the product details to load
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, '.private-product-detail__description'))
-                    )
-                    time.sleep(5)  # Adjust sleep time as necessary
-                    
-                    # Get page source
-                    pageSource = driver.page_source
-                    
-                    # Parse the page source with BeautifulSoup
-                    soup = BeautifulSoup(pageSource, 'html.parser')
-                    
-                    # Extract product details
-                    product_name = soup.select_one('.private-product-detail__description').get_text(strip=True)
-                    format = ' '.join([span.get_text(strip=True) for span in soup.select('.product-format__size .headline1-r')])
-                    description = soup.select_one('.private-product-detail__left').get('aria-label')
-                    
-                    # Parse format into several categories
-                    container, price_value, price_unit = parse_product_info(format)
-
-                    # Find the last product-gallery__thumbnail element and get its link
-                    thumbnails = driver.find_elements(By.CSS_SELECTOR, ".product-gallery__thumbnail img")
-                    if thumbnails:
-                        url_img = thumbnails[-1]
-                        url_img = url_img.get_attribute("src")
-                        url_img = url_img.replace("h=300", "h=1600").replace("w=300", "w=1600") # Change the resolution to be able to read it.
-                    else:
-                        url_img = ''
-                    
-                    # Write the product details to the CSV file
-                    writer.writerow([
-                        categorie or '',
-                        subcategorie or '',
-                        product_name or '',
-                        container or '',
-                        price_value or '',
-                        price_unit or '',
-                        description or '',
-                        url_img or ''
-                    ])
-                    
-                    # Print what was added to the csv
-                    print(f"Added {product_name}")
-                    
-                    # Navigate back to the categories page
-                    driver.back()
-
-                    # Wait for the categories page to load
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".category-menu"))
-                    )
-                    time.sleep(5)  # Adjust sleep time as necessary to ensure the page loads
-
-                except Exception as e:
-                    error_message = f"Error clicking product cells: {e}\n"
-                    if 'product_name' in locals():
-                        error_message += f"Product name: {product_name}\n"
-                    with open('errors.log', 'a') as error_file:
-                        error_file.write(error_message)
-                    print(error_message)
-                    
-                    # Save the current HTML to the error htmls folder with a unique name
-                    html_filename = f"error_{categorie}_{subcategorie}_{int(time.time())}.html"
-                    with open(os.path.join('error_htmls', html_filename), 'w', encoding='utf-8') as html_file:
-                        html_file.write(pageSource)
-                    
-                    # Return to the saved URL if an error occurs
-                    driver.get(current_url)
+                if not product_name:
+                    print("Could not find product name, skipping...")
                     continue
-    except Exception as e:
-        error_message = f"Error in press_each_product_cell: {e}\n"
-        with open('errors.log', 'a') as error_file:
-            error_file.write(error_message)
-        print(error_message)
-            
+
+                if resume_mode:
+                    if product_name == last_product:
+                        resume_mode = False
+                        continue  # Skip this product to avoid duplication
+                    else:
+                        continue
+
+                # Save the current webpage link before clicking the cell in case of an error
+                current_url = driver.current_url
+                
+                cell.click()
+                # Wait for the product details to load
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, '.private-product-detail__description'))
+                )
+                time.sleep(5)  # Adjust sleep time as necessary
+                
+                # Get page source
+                pageSource = driver.page_source
+                
+                # Parse the page source with BeautifulSoup
+                soup = BeautifulSoup(pageSource, 'html.parser')
+                
+                # Extract product details
+                product_name = soup.select_one('.private-product-detail__description').get_text(strip=True)
+                format = ' '.join([span.get_text(strip=True) for span in soup.select('.product-format__size .headline1-r')])
+                description = soup.select_one('.private-product-detail__left').get('aria-label')
+                
+                # Parse format into several categories
+                container, price_value, price_unit = parse_product_info(format)
+
+                # Find the last product-gallery__thumbnail element and get its link
+                thumbnails = driver.find_elements(By.CSS_SELECTOR, ".product-gallery__thumbnail img")
+                if thumbnails:
+                    url_img = thumbnails[-1]
+                    url_img = url_img.get_attribute("src")
+                    url_img = url_img.replace("h=300", "h=1600").replace("w=300", "w=1600") # Change the resolution to be able to read it.
+                else:
+                    url_img = ''
+                
+                # Write the product details to the CSV file
+                writer.writerow([
+                    categorie or '',
+                    subcategorie or '',
+                    product_name or '',
+                    container or '',
+                    price_value or '',
+                    price_unit or '',
+                    description or '',
+                    url_img or ''
+                ])
+                
+                # Print what was added to the csv
+                print(f"Added {product_name}")
+                
+                # Navigate back to the categories page
+                driver.back()
+
+                # Wait for the categories page to load
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".category-menu"))
+                )
+                time.sleep(5)  # Adjust sleep time as necessary to ensure the page loads
+
+            except Exception as e:
+                error_message = f"Error clicking product cells: {e}\n"
+                if 'product_name' in locals():
+                    error_message += f"Product name: {product_name}\n"
+                with open('errors.log', 'a') as error_file:
+                    error_file.write(error_message)
+                print(error_message)
+                
+                # Save the current HTML to the error htmls folder with a unique name
+                html_filename = f"error_{categorie}_{subcategorie}_{int(time.time())}.html"
+                with open(os.path.join('error_htmls', html_filename), 'w', encoding='utf-8') as html_file:
+                    html_file.write(driver.page_source)
+                
+                # Return to the saved URL if an error occurs
+                driver.get(current_url)
+                continue
 
 
 
@@ -249,10 +256,11 @@ def iterate_categories_and_subcategories(driver, skip_no_food=True):
                         print(f"Scraping: {subhead_text}")
                         time.sleep(120)
                         
-                        if resume_mode:
-                            resume_mode = False  # Switch off resume mode after finding the last product
+                        press_each_product_cell(driver, header_button.text, subhead_button.text, last_product if resume_mode else None)
                         
-                        press_each_product_cell(driver, header_button.text, subhead_button.text, last_product)
+                        if resume_mode:
+                            resume_mode = False
+                            last_product = None
                     except Exception as e:
                         error_message = f"Error processing subhead: {e}\n"
                         if 'subhead_text' in locals():
@@ -295,7 +303,7 @@ if __name__ == "__main__":
     # Delete mercadona.csv and errors.log if they exist
     remove_execution_files(['errors.log'])
     postal_code = "23009"
-    driver = open_categories_mercadona(postal_code, headless=True)
+    driver = open_categories_mercadona(postal_code, headless=False)
     time.sleep(3)
     iterate_categories_and_subcategories(driver)
     driver.close()
